@@ -1,20 +1,40 @@
-// app.js – 화면 동작 (목록 그리기, 일정 추가)
+// app.js – 화면 동작 (목록 그리기, 일정 추가, Supabase 연동)
 
 let tasks = [];
 let weatherByRegion = {};   // 03 단원에서 지역별 날씨를 넣음
 
+// Supabase 클라이언트 초기화 (config.js의 SUPABASE_URL, SUPABASE_ANON_KEY 사용)
+const supabaseClient = (typeof window !== 'undefined' && window.supabase && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined')
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
 async function loadTasks() {
+  const msgBox = document.getElementById('msgBox');
+  if (msgBox) msgBox.textContent = '';
+
+  if (!supabaseClient || SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+    if (msgBox) msgBox.textContent = '⚠️ config.js에 Supabase 접속 정보를 설정해주세요';
+    try {
+      const response = await fetch('data/tasks.json');
+      if (response.ok) tasks = await response.json();
+    } catch (e) {
+      tasks = [];
+    }
+    return;
+  }
+
   try {
-    const response = await fetch('data/tasks.json');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const baseTasks = await response.json();
-    const saved = JSON.parse(localStorage.getItem('wx_added') || '[]');
-    tasks = baseTasks.concat(saved);
+    const { data, error } = await supabaseClient
+      .from('wx_tasks')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) throw error;
+    tasks = data || [];
   } catch (err) {
-    console.error('JSON 파일 로드 실패:', err);
-    const msgBox = document.getElementById('msgBox');
-    if (msgBox) msgBox.textContent = '⚠️ 배포주소로 열어주세요';
-    tasks = JSON.parse(localStorage.getItem('wx_added') || '[]');
+    console.error('Supabase 데이터 로드 실패:', err);
+    if (msgBox) msgBox.textContent = '⚠️ Supabase 일정 로드 실패: ' + err.message;
+    tasks = [];
   }
 }
 
@@ -59,8 +79,11 @@ function renderTasks() {
   }
 }
 
-function addTask(e) {
+async function addTask(e) {
   e.preventDefault();
+  const msgBox = document.getElementById('msgBox');
+  if (msgBox) msgBox.textContent = '';
+
   const t = {
     title: document.getElementById('titleInput').value.trim(),
     region: document.getElementById('regionInput').value,
@@ -68,12 +91,22 @@ function addTask(e) {
     owner: document.getElementById('ownerInput').value.trim(),
   };
   if (!t.title || !t.owner) return;
-  const saved = JSON.parse(localStorage.getItem('wx_added') || '[]');
-  saved.push(t);
-  localStorage.setItem('wx_added', JSON.stringify(saved));
-  e.target.reset();
-  loadTasks();
-  renderTasks();
+
+  if (!supabaseClient || SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+    if (msgBox) msgBox.textContent = '⚠️ config.js에 Supabase 접속 정보를 설정해주세요';
+    return;
+  }
+
+  try {
+    const { error } = await supabaseClient.from('wx_tasks').insert([t]);
+    if (error) throw error;
+    e.target.reset();
+    await loadTasks();
+    renderTasks();
+  } catch (err) {
+    console.error('Supabase 일정 추가 실패:', err);
+    if (msgBox) msgBox.textContent = '⚠️ 일정 추가 실패: ' + err.message;
+  }
 }
 
 function displayTodayDate() {
@@ -86,7 +119,33 @@ function displayTodayDate() {
   el.textContent = `${yyyy}-${mm}-${dd}`;
 }
 
+function getTodayString() {
+  const el = document.getElementById('todayDate');
+  if (el && el.textContent) return el.textContent;
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function saveMarkdown() {
+  const dateStr = getTodayString();
+  const md = generateMarkdownReport(tasks, weatherByRegion, dateStr);
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `현장일정_판단_${dateStr}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 document.getElementById('taskForm').addEventListener('submit', addTask);
+const saveMdBtn = document.getElementById('saveMdBtn');
+if (saveMdBtn) saveMdBtn.addEventListener('click', saveMarkdown);
 displayTodayDate();
 (async () => {
   await loadTasks();

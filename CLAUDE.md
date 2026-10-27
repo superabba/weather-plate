@@ -12,7 +12,9 @@
 - index.html : 화면 구조
 - style.css  : 디자인
 - logic.js   : 판단 규칙만 (화면을 다루는 코드 금지)
-- app.js     : 화면 동작 (목록 그리기, 일정 추가)
+- app.js     : 화면 동작 (목록 그리기, 일정 추가, Supabase 연동)
+- config.js  : Supabase 연결 설정 (URL 및 anon key)
+- setup.sql  : Supabase 데이터베이스 테이블 생성 및 정책 스크립트
 - data/tasks.json : 초기 일정 데이터 (가상 데이터)
 - PRD.md · CLAUDE.md · README.md : 문서
 
@@ -26,7 +28,8 @@
 - 사용자가 입력한 글자는 textContent 로 표시한다.
 - 비밀 키는 코드 · 채팅 · GitHub 에 넣지 않는다.
 
-## 데이터 로드 규칙 (04 단원)
-- JSON 파일은 항상 fetch로 읽는다 (CORS 제약으로 file:// 에서는 실패).
-- 브라우저 저장소(localStorage)보다 JSON을 먼저 읽고, 사용자가 추가한 일정만 localStorage에 따로 저장한다.
-- JSON 읽기 실패 시 화면에 '⚠️ 배포주소로 열어주세요' 메시지를 표시한다.
+## 데이터 규칙 (04 단원 - Supabase)
+- 모든 일정 데이터는 Supabase의 `wx_tasks` 표에서 읽고(`select`), 추가된 일정도 해당 표에 저장(`insert`)한다.
+- 외부 라이브러리는 `supabase-js` 하나만 사용한다.
+- Supabase 연결 정보는 `config.js`에 주소와 공개용 키(anon key) 2줄만 작성한다. 비밀 키(service_role)는 절대 사용하지 않는다.
+- 데이터베이스 차원에서 유효하지 않은 데이터가 저장되지 않도록 구분(`kind`) 및 지역(`region`)에 `CHECK` 제약조건을 설정한다.
