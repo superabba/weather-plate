@@ -15,7 +15,7 @@ const REGION_COORDS = {
 function buildWeatherUrl(region) {
   const coord = REGION_COORDS[region];
   if (!coord) return null;
-  const testWind = new URLSearchParams(window.location.search).get('test');
+  const testWind = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search).get('test') : null;
   const url = new URL('https://api.open-meteo.com/v1/forecast');
   url.searchParams.append('latitude', coord.lat);
   url.searchParams.append('longitude', coord.lon);
@@ -27,7 +27,7 @@ function buildWeatherUrl(region) {
 // API 응답 해석
 function parseWeatherData(region, data) {
   if (!data.daily || !data.daily.time || data.daily.time.length === 0) return null;
-  const testWind = new URLSearchParams(window.location.search).get('test');
+  const testWind = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search).get('test') : null;
   let windMax = data.daily.wind_speed_10m_max[0];
   if (testWind === 'wind') windMax = 12;
   return {

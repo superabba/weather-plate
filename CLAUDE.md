@@ -13,6 +13,7 @@
 - style.css  : 디자인
 - logic.js   : 판단 규칙만 (화면을 다루는 코드 금지)
 - app.js     : 화면 동작 (목록 그리기, 일정 추가, Supabase 연동)
+- api/kma.js : Vercel 서버리스 함수 (지역별 일정·날씨·판단 API)
 - config.js  : Supabase 연결 설정 (URL 및 anon key)
 - setup.sql  : Supabase 데이터베이스 테이블 생성 및 정책 스크립트
 - data/tasks.json : 초기 일정 데이터 (가상 데이터)
