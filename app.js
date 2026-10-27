@@ -1,21 +1,21 @@
 // app.js – 화면 동작 (목록 그리기, 일정 추가)
 
-// 01 단원 : 일정 목록을 코드 안에 둠 (가상 데이터) → 04 단원에서 data/tasks.json 으로 분리
-const SAMPLE_TASKS = [
-  { title: '다중이용시설 안전점검', region: '세종', kind: '야외', owner: '김안전' },
-  { title: '시민 안전체험 행사 운영', region: '보령', kind: '야외', owner: '이행사' },
-  { title: '옥상 태양광 설비 점검', region: '태안', kind: '고소', owner: '박설비' },
-  { title: '하천 수위계 확인', region: '대전', kind: '야외', owner: '최현장' },
-  { title: '청사 외벽 간판 보수', region: '세종', kind: '고소', owner: '정시설' },
-  { title: '비상연락 훈련', region: '대전', kind: '실내', owner: '한상황' },
-];
-
 let tasks = [];
 let weatherByRegion = {};   // 03 단원에서 지역별 날씨를 넣음
 
-function loadTasks() {
-  const saved = JSON.parse(localStorage.getItem('wx_added') || '[]');
-  tasks = SAMPLE_TASKS.concat(saved);
+async function loadTasks() {
+  try {
+    const response = await fetch('data/tasks.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const baseTasks = await response.json();
+    const saved = JSON.parse(localStorage.getItem('wx_added') || '[]');
+    tasks = baseTasks.concat(saved);
+  } catch (err) {
+    console.error('JSON 파일 로드 실패:', err);
+    const msgBox = document.getElementById('msgBox');
+    if (msgBox) msgBox.textContent = '⚠️ 배포주소로 열어주세요';
+    tasks = JSON.parse(localStorage.getItem('wx_added') || '[]');
+  }
 }
 
 async function fetchWeatherData() {
@@ -88,6 +88,8 @@ function displayTodayDate() {
 
 document.getElementById('taskForm').addEventListener('submit', addTask);
 displayTodayDate();
-loadTasks();
-renderTasks();
-fetchWeatherData();
+(async () => {
+  await loadTasks();
+  renderTasks();
+  fetchWeatherData();
+})();
