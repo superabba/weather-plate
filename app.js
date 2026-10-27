@@ -18,6 +18,23 @@ function loadTasks() {
   tasks = SAMPLE_TASKS.concat(saved);
 }
 
+async function fetchWeatherData() {
+  const regions = ['세종', '대전', '태안', '보령'];
+  for (const region of regions) {
+    try {
+      const url = buildWeatherUrl(region);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const data = await response.json();
+      const weather = parseWeatherData(region, data);
+      if (weather) weatherByRegion[region] = weather;
+    } catch (err) {
+      console.error(`날씨 조회 실패 (${region}):`, err);
+    }
+  }
+  renderTasks();
+}
+
 function weatherText(w) {
   return w ? w.tempMax + '℃ · ' + w.windMax + 'm/s · ' + w.rainProb + '%' : '-';
 }
@@ -73,3 +90,4 @@ document.getElementById('taskForm').addEventListener('submit', addTask);
 displayTodayDate();
 loadTasks();
 renderTasks();
+fetchWeatherData();
